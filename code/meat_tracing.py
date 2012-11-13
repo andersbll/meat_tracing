@@ -1,17 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-def X_is_running():
-	from subprocess import Popen, PIPE
-	p = Popen(["xset", "-q"], stdout=PIPE, stderr=PIPE)
-	p.communicate()
-	return p.returncode == 0
-
-import matplotlib
-if not X_is_running():
-	# use non-gui backend if X not present
-	matplotlib.use('Agg')
-
+import matplotlibinit
 
 from preprocessing import preprocessing
 from segmentation import segmentation
@@ -23,10 +13,11 @@ options = {
   'workingPath': '/home/abll/meat_tracing/data/working',
   # Path to results
   'outputPath': '/home/abll/meat_tracing/data/output',
-  
+
+  # Distance from the camera to the surface where the meat is placed
+ 'boardDepth' : 993.715,
+
   'segmentation': {
-    # distance from camera to the surface where the meat is placed
-   'boardDepth' : 64541.285,
   },
   'canonization': {
   },
@@ -49,7 +40,6 @@ def run():
 #  classification(options)
 
 
-
 if __name__ == '__main__':
-	run()
+  run()
 
