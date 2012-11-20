@@ -5,6 +5,12 @@ import sys
 import matplotlib.pyplot as plt
 
 
+def ensureDir(path):
+  '''Ensure that the directory of the given filepath exists.'''
+  d = os.path.dirname(path)
+  if not os.path.exists(d):
+    os.makedirs(d)
+
 def saveImg(path, img):
   '''Save image to file using matplotlib'''
   plt.imshow(img)
@@ -17,16 +23,18 @@ def gatherFiles(path, pattern=None):
   for (root, dirs, files) in os.walk(path):
     if pattern:
       result.extend([os.path.join(root,f) for f in fnmatch.filter(files, pattern)])
-    else: 
+    else:
       result.extend([os.path.join(root,f) for f in files])
   return result
 
 
-def printProgress(percent, length=50):
+def printProgress(num, total, length=50):
   '''Print a progress bar to the command line.
      percent should be a float value between 0 and 1'''
+  percent = float(num)/total
   hashsigns = int(percent*length)
-  sys.stdout.write('\r['+'#'*hashsigns + ' '*(length-hashsigns) + ']')
+  sys.stdout.write('\r['+'#'*hashsigns + ' '*(length-hashsigns) + '] %i/%i'%(num,total))
   if percent == 1.0:
     sys.stdout.write('\n')
   sys.stdout.flush()
+  

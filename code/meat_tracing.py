@@ -5,6 +5,7 @@ import matplotlibinit
 
 from preprocessing import preprocessing
 from segmentation import segmentation
+from canonization import canonization, canonizationTraining
 
 options = {
   # Path to the input dataset
@@ -20,24 +21,26 @@ options = {
   'segmentation': {
   },
   'canonization': {
+    # Number of images to use for determining whether other images are
+    # rotated upside down.
+    'numTrainImages' : 20,
+    # Dimensions of the canonized images.
+    'imgShape': (180,600),
   },
   'featureExtraction': {
   },
   'featureClustering': {
   },
-  'classification': {
-  }
 }
 
 
 def run():
-#  preprocessing(options)
+  preprocessing(options)
   segmentation(options)
-#  canonization(options)
+  canonizationTraining(options)
+  canonization(options)
 #  featureExtraction(options)
 #  featureClustering(options)
-#  featureBinning(options)
-#  classification(options)
 
 
 if __name__ == '__main__':

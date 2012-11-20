@@ -16,19 +16,28 @@ def intValue(bytes):
 def shortValue(bytes):
   return struct.unpack("H", bytes)[0]
 
-
-def make_depth_images(opts):
-  print '- Extracting and cropping depth maps from BMP files'
-  filepaths = misc.gatherFiles(opts['datasetPath'], '*dybde*')
+def preprocessing(opts):
+  print '# Preprocessing'
+  filepaths = misc.gatherFiles(opts['datasetPath'], '*_dybde*')
   fileNum = 0
-  for fileIn in filepaths:
+  for inDepth in filepaths:
     fileNum += 1
-    misc.printProgress(float(fileNum)/len(filepaths))
-    fileOut = os.path.splitext(fileIn)[0].replace('input', 'working/preprocessing')
-    fileOutDir = os.path.dirname(fileOut)
-    if not os.path.exists(fileOutDir):
-      os.makedirs(fileOutDir)
-    with open(fileIn, 'rb') as f:
+    misc.printProgress(fileNum, len(filepaths))
+    inImg = inDepth.replace('_dybde', '_kam')
+    outImg = inImg.replace('input', 'working/preprocessing').replace('.bmp', '.png')
+    outDepth = os.path.splitext(inDepth)[0].replace('input', 'working/preprocessing')
+    misc.ensureDir(outDepth)
+
+    # Crop image
+    img = sp.misc.imread(inImg)
+    if 'Dag 1' in inImg:
+      img = img[331:331+398, 110:110+821]
+    elif 'Dag 2' in inImg:
+      img = img[332:332+398, 167:167+821]
+    sp.misc.imsave(outImg, img)
+
+    # Extract and crop depth map
+    with open(inDepth, 'rb') as f:
       # Extract BMP header
       startAddress = intValue(getBytes(f,10,14))
       size = intValue(getBytes(f,2,6))
@@ -47,33 +56,9 @@ def make_depth_images(opts):
       depths[depths==65535] = opts['boardDepth']
       depths = depths.reshape(h,w)
       depths = np.flipud(depths)
-      if 'Dag 1' in fileIn:
+      if 'Dag 1' in inDepth:
         depths = depths[137:137+218, 37:37+450]
-      elif 'Dag 2' in fileIn:
+      elif 'Dag 2' in inDepth:
         depths = depths[136:136+218, 68:68+450]
-      np.save(fileOut, depths)
-      sp.misc.imsave(fileOut+'.png', depths)
-
-def make_cropped_images(opts):
-  print '- Cropping image files'
-  filepaths = misc.gatherFiles(opts['datasetPath'], '*_kam*')
-  fileNum = 0
-  for fileIn in filepaths:
-    fileNum += 1
-    misc.printProgress(float(fileNum)/len(filepaths))
-    fileOut = os.path.splitext(fileIn)[0].replace('input', 'working/preprocessing')
-    fileOutDir = os.path.dirname(fileOut)
-    if not os.path.exists(fileOutDir):
-      os.makedirs(fileOutDir)
-    img = sp.misc.imread(fileIn)
-    if 'Dag 1' in fileIn:
-      img = img[331:331+398, 110:110+821]
-    elif 'Dag 2' in fileIn:
-      img = img[332:332+398, 167:167+821]
-    sp.misc.imsave(fileOut+'.png', img)
-
-def preprocessing(opts):
-  print 'Preprocessing'
-  make_depth_images(opts)
-  make_cropped_images(opts)
+      np.save(outDepth, depths)
 
