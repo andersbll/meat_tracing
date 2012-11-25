@@ -1,154 +1,107 @@
-import os
-import os.path
 import numpy as np
 import scipy as sp
-import scipy.misc
-import misc
-import math
-import sys
+import dataset
+import caching
+from misc import print_progress
+from preprocessing import preprocess_image
+from segmentation import segmentation
 
 from skimage.measure import regionprops
 from skimage.color import rgb2gray
 from skimage.morphology import label
+from skimage.exposure import equalize
 
+def histeq(img, mask=None, nbr_bins=256):
+  if mask != None:
+    img_masked = np.ma.array(img, mask=mask)
+    pixels = img_masked.compressed()
+  else:
+    pixels = img.flatten()
 
-def canonize(img, segMask, opts):
+  #get image histogram
+  imhist,bins = np.histogram(pixels, nbr_bins, normed=True)
+  cdf = imhist.cumsum() #cumulative distribution function
+  cdf = 255 * cdf / cdf[-1] #normalize
+
+  #use linear interpolation of cdf to find new pixel values
+  img2 = np.interp(img.flatten(), bins[:-1], cdf)
+
+  return img2.reshape(img.shape).astype(np.uint8)
+
+def _canonize(img, segmask, opts):
   # Canonize image and its segmentation mask
   # The rotation performed does not consider that an image may be
   # upside down.
-  segMask = sp.misc.imresize(segMask, img.shape, interp='nearest')
+  segmask = sp.misc.imresize(segmask, img.shape, interp='nearest')
   img = rgb2gray(img)
 
   # Rotate image according to the major/minor axis
-  props = regionprops(label(segMask), properties=['Orientation','BoundingBox'])
-  angle = -props[0]['Orientation']*180/math.pi
-  angle_ = props[0]['Orientation']
-  bbox_ = props[0]['BoundingBox']
-  shape_ = img.shape
+  props = regionprops(label(segmask), properties=['Orientation'])
+  angle = -props[0]['Orientation']*180/np.pi
   img = sp.misc.imrotate(img, angle)
-  segMask = sp.misc.imrotate(segMask, angle, interp='nearest')
+  segmask = sp.misc.imrotate(segmask, angle, interp='nearest')
 
   # Crop image according to the bounding box padded by 1 pixel
-  props = regionprops(label(segMask), properties=['BoundingBox'])
+  props = regionprops(label(segmask), properties=['BoundingBox'])
   bbox = props[0]['BoundingBox']
   t = bbox[0]-1
   l = bbox[1]-1
   b = bbox[2]+1
   r = bbox[3]+1
   img = img[t:b, l:r]
-  segMask = segMask[t:b, l:r]
+  segmask = segmask[t:b, l:r]
 
   # Resize image and segmentation mask
-  img = sp.misc.imresize(img, opts['canonization']['imgShape'])
-  segMask = sp.misc.imresize(segMask, opts['canonization']['imgShape'], interp='nearest')
+  img = sp.misc.imresize(img, opts['img_shape'])
+  segmask = sp.misc.imresize(segmask, opts['img_shape'], interp='nearest')
 
   # Cut image according to segmentation
-  img[segMask==0] = 0
-  return img, segMask
+  img[segmask==0] = 0
+
+  if opts['hist_eq'] == True:
+    # Histogram equalization
+    segmask[segmask!=0] = 1
+    segmask_ = (segmask+1) % 2
+    img_masked = np.ma.array(img, mask=segmask_)
+    img = histeq(img, segmask_)
+
+  return img, segmask
 
 
-def canonizationTraining(opts):
+@caching.cache
+def canonization_training(opts):
+  print '## Canonization training'
+  params = caching.nul_repr_dict()
   # Generate average intensity image from a subset of the dataset.
-  print '# Canonization, training'
-  filepaths = misc.gatherFiles(os.path.join(opts['workingPath'],'preprocessing'), '*_kam*.png')
-  filepaths = filepaths[:opts['canonization']['numTrainImages']]
-  img_avg = np.zeros(opts['canonization']['imgShape'], dtype=int)
-  fileNum = 0
-  for inImg in filepaths:
-    fileNum += 1
-    misc.printProgress(fileNum,len(filepaths))
-    inSegMask = inImg.replace('preprocessing','segmentation').replace('_kam','_segmask').replace('.png','.npy')
-    img = sp.misc.imread(inImg)
-    segMask = np.load(inSegMask)
-    img, segMask = canonize(img, segMask, opts)
+  img_avg = np.zeros(opts['img_shape'], dtype=int)
+  files = dataset.training_files(opts['num_train_images'])
+  for img_file, depth_file in print_progress(files):
+    img = preprocess_image(img_file)
+    segmask = segmentation(depth_file, opts['segmentation'])
+    img, segmask = _canonize(img, segmask, opts)
     # Orient correctly if image is upside down
-    if isUpsideDown(inImg):
+    if dataset.is_upside_down(img_file):
       img = np.fliplr(np.flipud(img))
     img_avg += img
-  img_avg /= fileNum
-  sp.misc.imsave(imgAvgPath(opts), img_avg)
+  img_avg /= len(files)
+  params['img_avg'] = img_avg
+  params['img_avg_upsidedown'] = np.fliplr(np.flipud(img_avg))
+  return params
 
+@caching.cache
+def canonize(img_file, depth_file, opts, params):
+  img = preprocess_image(img_file)
+  segmask = segmentation(depth_file, opts['segmentation'])
 
-def canonization(opts):
-  print '# Canonization'
-  filepaths = misc.gatherFiles(os.path.join(opts['workingPath'],'preprocessing'), '*_kam*.png')
-  fileNum = 0
-#  numFalse = 0
-  img_avg = sp.misc.imread(imgAvgPath(opts)).astype(int)
-  img_avg_upsidedown = np.fliplr(np.flipud(img_avg))
-  for inImg in filepaths:
-    fileNum += 1
-    misc.printProgress(fileNum,len(filepaths))
-    inSegMask = inImg.replace('preprocessing','segmentation').replace('_kam','_segmask').replace('.png','.npy')
-    outSegMask = inSegMask.replace('segmentation', 'canonization')
-    outImg = inImg.replace('preprocessing', 'canonization')
-    misc.ensureDir(outImg)
+  img, segmask = _canonize(img, segmask, opts)
 
-    img = sp.misc.imread(inImg)
-    segMask = np.load(inSegMask)
-    img, segMask = canonize(img, segMask, opts)
+  # Determine if image is upside down.
+  diff = np.sum(np.abs(img - params['img_avg']))
+  diff_upsidedown = np.sum(np.abs(img - params['img_avg_upsidedown']))
+  upsidedown = diff > diff_upsidedown
+  if upsidedown:
+    img = np.fliplr(np.flipud(img))
+    segmask = np.fliplr(np.flipud(segmask))
 
-    # Determine if image is upside down.
-    diff = np.sum(np.abs(img - img_avg))
-    diff_upsidedown = np.sum(np.abs(img - img_avg_upsidedown))
-    upsidedown = diff > diff_upsidedown
-    if upsidedown:
-      img = np.fliplr(np.flipud(img))
-      segMask = np.fliplr(np.flipud(segMask))
-
-    sp.misc.imsave(outImg, img)
-    np.save(outSegMask, segMask)
-
-#    if isUpsideDown(inImg) != upsidedown:
-#      print 'False prediction ' + str(upsidedown) + ': ' + canonizePath(inImg)
-#      numFalse += 1
-#  print 'Total number of predictions: ' + str(len(filepaths))
-#  print 'Total number of false predictions: ' + str(numFalse)
-#  print 'Accuracy: ' + str(1-float(numFalse)/len(filepaths))
-
-
-upsidedown_images = [
-'Dag 2/Normal/Normal_kam52',
-'Dag 2/Normal/Normal_kam38',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam176',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam177',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam178',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam180',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam181',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam183',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam185',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam186',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam191',
-'Dag 2/Ekstra 2/Ekstra billedserie 2_kam192',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam156',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam157',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam158',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam159',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam160',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam161',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam162',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam163',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam164',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam165',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam166',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam167',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam168',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam169',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam170',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam171',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam172',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam173',
-'Dag 2/Ekstra 1/Ekstra billedserie 1_kam174',
-]
-
-def canonizePath(path):
-  # normalize path string
-  return  os.path.splitext('/'.join(path.rsplit('/', 3)[1:]))[0]
-
-def isUpsideDown(path):
-  path = canonizePath(path)
-  return path in upsidedown_images
-
-def imgAvgPath(opts):
-  return os.path.join(opts['workingPath'],'kam_avg.png')
+  return img, segmask
 

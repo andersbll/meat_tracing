@@ -5,19 +5,13 @@ import sys
 import matplotlib.pyplot as plt
 
 
-def ensureDir(path):
-  '''Ensure that the directory of the given filepath exists.'''
-  d = os.path.dirname(path)
-  if not os.path.exists(d):
-    os.makedirs(d)
-
-def saveImg(path, img):
+def save_img(path, img):
   '''Save image to file using matplotlib'''
-  plt.imshow(img)
+  plt.imshow(img, interpolation='nearest')
   plt.savefig(path)
 
 
-def gatherFiles(path, pattern=None):
+def gather_files(path, pattern=None):
   ''' Recursively find all files and filter using the given pattern'''
   result = []
   for (root, dirs, files) in os.walk(path):
@@ -28,13 +22,20 @@ def gatherFiles(path, pattern=None):
   return result
 
 
-def printProgress(num, total, length=50):
-  '''Print a progress bar to the command line.
-     percent should be a float value between 0 and 1'''
-  percent = float(num)/total
-  hashsigns = int(percent*length)
-  sys.stdout.write('\r['+'#'*hashsigns + ' '*(length-hashsigns) + '] %i/%i'%(num,total))
-  if percent == 1.0:
-    sys.stdout.write('\n')
-  sys.stdout.flush()
-  
+def print_progress(iterable, bar_width=50):
+  ''' Wrap iterable in a generator that prints a progress bar to the
+      command line as the iterable is traversed.'''
+  total = float(len(iterable))
+  for num, obj in enumerate(iterable):
+    num = num + 1
+    percent = num/total
+    hashsigns = int(percent*bar_width)
+    sys.stdout.write('\r['+'#'*hashsigns + ' '*(bar_width-hashsigns) + '] %i/%i'%(num,total))
+    if percent == 1.0:
+      sys.stdout.write('\n')
+    sys.stdout.flush()
+    yield obj
+
+
+
+
