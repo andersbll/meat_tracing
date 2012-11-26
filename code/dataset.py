@@ -1,5 +1,4 @@
 import os
-import os.path
 import misc
 import options
 
@@ -8,6 +7,9 @@ def canonize_path(path):
   return  '/'.join(path.rsplit('/', 3)[1:])
 
 def prune(filepaths1, filepaths2):
+  for f in filepaths1:
+    if '131.bmp' in f:
+      filepaths1.remove(f)
   filepaths1 = sorted(filepaths1)
   filepaths2 = sorted(filepaths2)
   filepaths1_ = []

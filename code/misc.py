@@ -1,5 +1,4 @@
 import os
-import os.path
 import fnmatch
 import sys
 import matplotlib.pyplot as plt

@@ -76,7 +76,7 @@ feature_extraction = {
 }
 
 matching = {
-  'metric' : 'manhattan',
   'bipartite_matching': False,
+  'metric' : 'manhattan',
 }
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+
 import os
 import numpy as np
 import scipy as sp
@@ -15,9 +16,8 @@ from dataset import dataset
 from misc import print_progress, save_img
 
 @caching.cache
-def training(canonize_opts, features_opts):
-  print '# Training'
-  params = canonization_training(canonize_opts)
+def training(features_opts):
+  params = canonization_training(features_opts['canonization'])
   params.update(feature_training(features_opts, params))
   return params
 
@@ -30,33 +30,15 @@ def extract_features(features_opts, dataset_opts, params):
     features.append(feature_extraction(img_file, depth_file, features_opts, params))
   return files1, features[:len(features)/2], files2, features[len(features)/2:]
 
-
-#def output(files1, files2, distances):
-
-##    i += 1
-##    fromPath1 = filepaths1[topmatches[idx]].replace('feature_extraction','canonization').replace('features','kam').replace('.npy','.png')
-##    fromPath2 = filepaths2[topmatches[idx]].replace('feature_extraction','canonization').replace('features','kam').replace('.npy','.png')
-##    toPath1 = os.path.join(opts['outputPath'], 'top_' + str(i) + '_dag1_' + os.path.basename(fromPath1))
-##    toPath2 = os.path.join(opts['outputPath'], 'top_' + str(i) + '_dag2_' + os.path.basename(fromPath2))
-##    shutil.copy2(fromPath1, toPath1)
-##    shutil.copy2(fromPath2, toPath2)
-
-###  i = 0
-###  for idx in topmatches[-5:]:
-###    i += 1
-###    fromPath1 = filepaths1[topmatches[idx]].replace('feature_extraction','canonization').replace('features','kam').replace('.npy','.png')
-###    fromPath2 = filepaths2[topmatches[idx]].replace('feature_extraction','canonization').replace('features','kam').replace('.npy','.png')
-###    toPath1 = os.path.join(opts['outputPath'], 'bottom_' + str(i) + '_dag1_' + os.path.basename(fromPath1))
-###    toPath2 = os.path.join(opts['outputPath'], 'bottom_' + str(i) + '_dag2_' + os.path.basename(fromPath2))
-###    shutil.copy2(fromPath1, toPath1)
-###    shutil.copy2(fromPath2, toPath2)
-
-
-if __name__ == '__main__':
-  params = training(options.canonization, options.feature_extraction)
+def run():
+  params = training(options.feature_extraction)
   files1, features1, files2, features2 = extract_features(
       options.feature_extraction, options.dataset, params)
   distances = matching(features1, features2, options.matching)
+
+  # Delete previous results
+  for f in os.listdir(options.output_dir):
+    os.remove(os.path.join(options.output_dir, f))
 
   # Output results
   save_img(os.path.join(options.output_dir, 'confusion.png'), distances)
@@ -72,31 +54,28 @@ if __name__ == '__main__':
   results['Total number of predictions'] = distances.shape[0]
   results['Number of mispredictions'] = num_false
   results['Accuracy'] = 1-float(num_false)/distances.shape[0]
-  print results
 
-
+  results['False matches'] = []
   for i, idx in enumerate(false_matches):
-    img_file1, depth_file1 = files1[idx]
-    img_file2, depth_file2 = files2[idx]
-    img1, _ = canonize(img_file1, depth_file1, options.canonization, params)
-    img2, _ = canonize(img_file2, depth_file2, options.canonization, params)
-    sp.misc.imsave(os.path.join(options.output_dir, 'false_match%i_dag1.png'%(i+1)), img1)
-    sp.misc.imsave(os.path.join(options.output_dir, 'false_match%i_dag2.png'%(i+1)), img2)
+    results['False matches'].append(files1[idx][0])
+    output_img(files1[idx], 'false_match%i_dag1.png'%(i+1), params)
+    guessed_idx = distances[idx,:].argmin()
+    output_img(files2[guessed_idx], 'false_match%i_dag2.png'%(i+1), params)
+    output_img(files2[idx], 'false_match%i_dag2_correct.png'%(i+1), params)
 
   topmatches = np.diag(distances).argsort()
   for i, idx in enumerate(topmatches[:3]):
-    img_file1, depth_file1 = files1[idx]
-    img_file2, depth_file2 = files2[idx]
-    img1, _ = canonize(img_file1, depth_file1, options.canonization, params)
-    img2, _ = canonize(img_file2, depth_file2, options.canonization, params)
-    sp.misc.imsave(os.path.join(options.output_dir, 'top%i_dag1.png'%(i+1)), img1)
-    sp.misc.imsave(os.path.join(options.output_dir, 'top%i_dag2.png'%(i+1)), img2)
+    output_img(files1[idx], 'top_match%i_dag1.png'%(i+1), params)
+    output_img(files2[idx], 'top_match%i_dag2.png'%(i+1), params)
   for i, idx in enumerate(topmatches[-3:]):
-    img_file1, depth_file1 = files1[idx]
-    img_file2, depth_file2 = files2[idx]
-    img1, _ = canonize(img_file1, depth_file1, options.canonization, params)
-    img2, _ = canonize(img_file2, depth_file2, options.canonization, params)
-    sp.misc.imsave(os.path.join(options.output_dir, 'bottom%i_dag1.png'%(5-i)), img1)
-    sp.misc.imsave(os.path.join(options.output_dir, 'bottom%i_dag2.png'%(5-i)), img2)
+    output_img(files1[idx], 'bottom_match%i_dag1.png'%(3-i), params)
+    output_img(files2[idx], 'bottom_match%i_dag2.png'%(3-i), params)
+  print results
 
+def output_img(filename, output_filename, params):
+  img_file, depth_file = filename
+  img, _ = canonize(img_file, depth_file, options.canonization, params)
+  sp.misc.imsave(os.path.join(options.output_dir, output_filename), img)
 
+if __name__ == '__main__':
+  run()

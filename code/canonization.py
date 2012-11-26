@@ -70,7 +70,7 @@ def _canonize(img, segmask, opts):
 
 @caching.cache
 def canonization_training(opts):
-  print '## Canonization training'
+  print '# Canonization training'
   params = caching.nul_repr_dict()
   # Generate average intensity image from a subset of the dataset.
   img_avg = np.zeros(opts['img_shape'], dtype=int)

@@ -1,10 +1,10 @@
 import os
-import os.path
 import sys
 import hashlib
 import json
 import pickle
 import options
+import inspect
 
 _cache_dir = os.path.join(os.path.abspath(
     os.path.dirname(sys.argv[0])), "cache")
@@ -44,18 +44,33 @@ class cache(object):
   '''Decorator class that performs a file system cache of the return 
   value of its function.
 
-  It works (somewhat) similar to the percache package:
-    http://pypi.python.org/pypi/percache
+  It works similar to the percache package [1], except for:
+    - The shelve module is not used for caching return values. Instead,
+      return values are pickled to individual files.
+    - The function source code is also included in the hash sum such
+      that code changes trigger a new function evaluation.
+    - It allows for passing arguments that should not be included in
+      the hash sum. See the nul_repr_dict class.
+
+  Warning: Don't use this decorator headlessly. It is possible to
+  unintentionally cheat the checksum mechanism in several ways. E.g.:
+    - If the function relies on code from another part of the program
+      and this part is changed.
+    - If the function is shadowed by a cache decorator higher in the
+      function tree.
+
+  [1]: http://pypi.python.org/pypi/percache
   '''
   def __init__(self, func):
     self.func = func
     self.cache_dir = os.path.join(_cache_dir, func.__module__,  func.__name__)
+    self.func_source = inspect.getsource(func)
     if not os.path.exists(self.cache_dir):
       os.makedirs(self.cache_dir)
 
   def __call__(self, *args):
-    checksum = hashlib.sha1(json.dumps(
-        args, sort_keys=True, cls=_JSONEncoder)).hexdigest()
+    checksum = hashlib.sha1(json.dumps(args, sort_keys=True, 
+        cls=_JSONEncoder)+self.func_source).hexdigest()
     cache_file = os.path.join(self.cache_dir, checksum)
     if os.path.exists(cache_file):
       with open(cache_file,'rb') as f:

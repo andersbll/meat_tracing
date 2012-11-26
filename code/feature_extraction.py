@@ -3,6 +3,7 @@ import scipy as sp
 import dataset
 import caching
 import options
+import sys
 from misc import print_progress
 from canonization import canonize
 
@@ -15,7 +16,7 @@ from sklearn.cluster import KMeans
 
 @caching.cache
 def feature_training(opts, params):
-  print '## Feature extraction training'
+  print '# Feature extraction training'
   if 'hog_bow' in opts:
     opts_ = opts['hog_bow']
     descs = []
@@ -29,7 +30,7 @@ def feature_training(opts, params):
           if segmask[i,j] != 0:
             descs.append(h[i,j,:,:,:].flatten())
     descs = np.vstack(tuple(descs))
-    print '## K-means clustering of %i features of dimensionality %i'%(descs.shape[0], descs.shape[1])
+    print '# K-means clustering of %i features of dimensionality %i'%(descs.shape[0], descs.shape[1])
     kmeans = KMeans(opts_['num_clusters'], n_jobs=options.num_threads)
     kmeans.fit(descs)
     params['hog_bow_kmeans'] = kmeans
@@ -78,30 +79,41 @@ def feature_extraction(img_file, depth_file, opts, params):
 
   if 'hog_bow' in opts:
     opts_ = opts['hog_bow']
-    h = hog(img, **opts_['hog'])
-    descs = []
-    segmask_ = sp.misc.imresize(segmask, h.shape[:2])
-    for i in range(h.shape[0]):
-      for j in range(h.shape[1]):
-        descs.append(h[i,j,:,:,:].flatten())
-    descs = np.vstack(tuple(descs))
-    kmeans = params['hog_bow_kmeans']
-    clusters = kmeans.predict(descs)
+    for woop in range(2):
+      features_ = np.array([], dtype=float)
+      descs = []
+      if woop == 0:
+        h = hog(img, **opts_['hog'])
+      else:
+        h = hog(img[4:,4:], **opts_['hog'])
+      segmask_ = sp.misc.imresize(segmask, h.shape[:2])
+      for i in range(h.shape[0]):
+        for j in range(h.shape[1]):
+          descs.append(h[i,j,:,:,:].flatten())
 
-    grid = opts_['grid']
-    clusters = clusters.reshape((h.shape[0],(h.shape[1])))
-    clusters = np.ma.array(clusters, mask = segmask_)
-    cellHeight = clusters.shape[0]/grid[0]
-    cellWidth = clusters.shape[1]/grid[1]
-    for i in range(grid[0]):
-      for j in range(grid[1]):
-        t = cellHeight*i
-        b = cellHeight*(i+1)
-        l = cellWidth*j
-        r = cellWidth*(j+1)
-        hist = np.bincount(clusters[t:b, l:r].flatten(), minlength=opts_['num_clusters'])
-        hist = hist.astype(float)
-#          hist /= np.max(hist)
-        features = np.append(features, hist)
+
+      kmeans = params['hog_bow_kmeans']
+      clusters = kmeans.predict(descs)
+      grid = opts_['grid']
+      clusters = clusters.reshape((h.shape[0],(h.shape[1])))
+      clusters = np.ma.array(clusters, mask = segmask_)
+      cellHeight = clusters.shape[0]/grid[0]
+      cellWidth = clusters.shape[1]/grid[1]
+      for i in range(grid[0]):
+        for j in range(grid[1]):
+          t = cellHeight*i
+          b = cellHeight*(i+1)
+          l = cellWidth*j
+          r = cellWidth*(j+1)
+          hist = np.bincount(clusters[t:b, l:r].flatten(), minlength=opts_['num_clusters'])
+          hist = hist.astype(float)
+  #          hist /= np.max(hist)
+          features_ = np.append(features_, hist)
+      if woop == 0:
+        features = np.append(features, features_)
+      else:
+        features += features_
+#  print features.shape
+#  sys.exit(0)
   return features
 
