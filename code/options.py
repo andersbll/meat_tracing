@@ -15,7 +15,12 @@ board_depth = 993.715
 
 
 dataset = {
+#  'experiment' : 'afskaering',
+#  'experiment' : 'ekstra1',
+#  'experiment' : 'ekstra2',
+#  'experiment' : 'mishandling',
   'experiment' : 'normal',
+#  'experiment' : 'ophaengning',
 }
 
 preprocess_depth = {
@@ -76,6 +81,7 @@ feature_extraction = {
 }
 
 matching = {
+#  'bipartite_matching': True,
   'bipartite_matching': False,
   'metric' : 'manhattan',
 }

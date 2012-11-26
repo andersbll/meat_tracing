@@ -41,8 +41,8 @@ class _JSONEncoder(json.JSONEncoder):
     return json.JSONEncoder.default(self, obj)
 
 class cache(object):
-  '''Decorator class that performs a file system cache of the return 
-  value of its function.
+  '''Decorator class that caches the return value of its function on
+  the file system.
 
   It works similar to the percache package [1], except for:
     - The shelve module is not used for caching return values. Instead,

@@ -3,7 +3,6 @@ import scipy as sp
 import dataset
 import caching
 import options
-import sys
 from misc import print_progress
 from canonization import canonize
 
@@ -107,13 +106,10 @@ def feature_extraction(img_file, depth_file, opts, params):
           r = cellWidth*(j+1)
           hist = np.bincount(clusters[t:b, l:r].flatten(), minlength=opts_['num_clusters'])
           hist = hist.astype(float)
-  #          hist /= np.max(hist)
           features_ = np.append(features_, hist)
       if woop == 0:
         features = np.append(features, features_)
       else:
         features += features_
-#  print features.shape
-#  sys.exit(0)
   return features
 
