@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 
 from sklearn.metrics.pairwise import pairwise_distances
-from munkres import Munkres, print_matrix
+from munkres import Munkres
 
 def matching(features1, features2, opts):
   print '# Matching'
