@@ -15,12 +15,12 @@ board_depth = 993.715
 
 
 dataset = {
-  'experiment' : 'afskaering',
+#  'experiment' : 'afskaering',
 #  'experiment' : 'ekstra1',
 #  'experiment' : 'ekstra2',
 #  'experiment' : 'mishandling',
 #  'experiment' : 'normal',
-#  'experiment' : 'ophaengning',
+  'experiment' : 'ophaengning',
 }
 
 preprocess_depth = {
@@ -44,35 +44,14 @@ canonization = {
 
 feature_extraction = {
   'canonization' : canonization,
-#  'hog': {
-#    'orientations': 8,
-#    'pixels_per_cell': (22, 22),
-#    'cells_per_block': (2, 2),
-#    'normalise': False,
-#  },
 
-#  'hog_bow': {
-#    'grid': (2,4),
-#    'num_train_images' : 20,
-#    'num_clusters': 401,
-#    'hog': {
-#      'orientations': 8,
-#      'pixels_per_cell': (8, 8),
-#      'cells_per_block': (4, 4),
-#      'normalise': False,
-#    },
-#  },
   'daisy_bow': {
-    'grid': (2,4),
-    'num_train_images' : 12,
+    'gauss_window_grid': (2,4),
+    'gauss_window_sigma': 10,
+    'num_train_images' : 20,
     'num_clusters': 500,
     'daisy': {
       'step': 4,
-#      'radius': 18,
-#      'rings': 3,
-#      'hists': 8,
-#      'bins':8,
-#      'ring_sigmas': [1.7, 3., 5.]
     },
   },
 #  'daisy': {
@@ -93,6 +72,6 @@ feature_extraction = {
 matching = {
 #  'bipartite_matching': True,
   'bipartite_matching': False,
-  'metric' : 'manhattan',
+  'metric' : 'euclidean',
 }
 

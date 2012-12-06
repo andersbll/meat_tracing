@@ -3,6 +3,9 @@ import fnmatch
 import sys
 import matplotlib.pyplot as plt
 
+from multiprocessing import Process, Pipe
+from itertools import izip
+
 
 def save_img(path, img):
   '''Save image to file using matplotlib'''
@@ -21,10 +24,13 @@ def gather_files(path, pattern=None):
   return result
 
 
-def print_progress(iterable, bar_width=50):
+def print_progress(iterable, bar_width=50, length=None):
   ''' Wrap iterable in a generator that prints a progress bar to the
       command line as the iterable is traversed.'''
-  total = float(len(iterable))
+  if length == None:
+    total = float(len(iterable))
+  else:
+    total = float(length)
   for num, obj in enumerate(iterable):
     num = num + 1
     percent = num/total
@@ -34,7 +40,4 @@ def print_progress(iterable, bar_width=50):
       sys.stdout.write('\n')
     sys.stdout.flush()
     yield obj
-
-
-
 

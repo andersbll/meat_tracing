@@ -99,6 +99,8 @@ def canonize(img_file, depth_file, opts, params):
   diff = np.sum(np.abs(img - params['img_avg']))
   diff_upsidedown = np.sum(np.abs(img - params['img_avg_upsidedown']))
   upsidedown = diff > diff_upsidedown
+  if dataset.is_upside_down(img_file) != upsidedown:
+    print 'Canonization failed!'
   if upsidedown:
     img = np.fliplr(np.flipud(img))
     segmask = np.fliplr(np.flipud(segmask))

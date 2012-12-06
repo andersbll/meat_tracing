@@ -15,7 +15,6 @@ from matching import matching
 from dataset import dataset
 from misc import print_progress, save_img
 
-@caching.cache
 def training(features_opts):
   params = canonization_training(features_opts['canonization'])
   params.update(feature_training(features_opts, params))
@@ -68,6 +67,7 @@ def run():
     output_img(files1[idx], 'top_match%i_dag1.png'%(i+1), params)
     output_img(files2[idx], 'top_match%i_dag2.png'%(i+1), params)
   for i, idx in enumerate(topmatches[-3:]):
+#    print files2[idx][0], (3-i)
     output_img(files1[idx], 'bottom_match%i_dag1.png'%(3-i), params)
     output_img(files2[idx], 'bottom_match%i_dag2.png'%(3-i), params)
   print results
