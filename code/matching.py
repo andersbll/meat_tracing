@@ -5,11 +5,11 @@ from sklearn.metrics.pairwise import pairwise_distances
 from munkres import Munkres
 
 def matching(features1, features2, opts):
-  print '# Matching'
+#  print '# Matching'
   distances = pairwise_distances(features1, features2, metric=opts['metric'])
 
   if opts['bipartite_matching']:
-    print '# Bipartite matching'
+#    print '# Bipartite matching'
     m = Munkres()
     matrix = []
     for i in range(distances.shape[0]):

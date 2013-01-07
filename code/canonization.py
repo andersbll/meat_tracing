@@ -11,6 +11,7 @@ from skimage.color import rgb2gray
 from skimage.morphology import label
 from skimage.exposure import equalize
 
+
 def histeq(img, mask=None, nbr_bins=256):
   if mask != None:
     img_masked = np.ma.array(img, mask=mask)
@@ -27,6 +28,7 @@ def histeq(img, mask=None, nbr_bins=256):
   img2 = np.interp(img.flatten(), bins[:-1], cdf)
 
   return img2.reshape(img.shape).astype(np.uint8)
+
 
 def _canonize(img, segmask, opts):
   # Canonize image and its segmentation mask
@@ -87,6 +89,7 @@ def canonization_training(opts):
   params['img_avg'] = img_avg
   params['img_avg_upsidedown'] = np.fliplr(np.flipud(img_avg))
   return params
+
 
 @caching.cache
 def canonize(img_file, depth_file, opts, params):

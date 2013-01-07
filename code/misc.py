@@ -1,6 +1,7 @@
 import os
 import fnmatch
 import sys
+import copy
 import matplotlib.pyplot as plt
 
 from multiprocessing import Process, Pipe
@@ -41,3 +42,41 @@ def print_progress(iterable, bar_width=50, length=None):
     sys.stdout.flush()
     yield obj
 
+def dicreplace(dic, path, value):
+  diccopy = copy.deepcopy(dic)
+  node = diccopy
+  for p in path[:-1]:
+    node = node[p]
+  node[path[-1]] = value
+  return diccopy
+
+def dicvariations(dic, variations):
+  dics = [(dic, '')]
+  if len(variations) == 0:
+    dics = [(dic, 'noname')]
+  else:
+    for name, path, values in reversed(variations):
+      dics = [(dicreplace(d, path, v), d_name+name+str(v)+'_')
+          for v in values for d, d_name in dics]
+    dics = [(d, d_name[:-1]) for d, d_name in dics]
+  return dics
+
+#if __name__ == '__main__':
+#  woop = {
+#    'a': {
+#      'aa': 0,
+#      'ab': 0,
+#    },
+#    'b': {
+#      'ba': 0,
+#      'bb': 0,
+#    }
+#  }
+#  variations = [
+#      ('a', ['a', 'aa'], [1, 2]),
+#      ('b', ['b', 'bb'], [3, 4]),
+#  ]
+#  print dicvariations(woop, variations)
+
+##  print vary(woop, ['a'], [35, 1, 2])
+##  print w in over

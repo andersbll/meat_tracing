@@ -13,14 +13,13 @@ num_threads = 8
 # Distance from the camera to the surface where the meat is placed
 board_depth = 993.715
 
-
 dataset = {
-#  'experiment' : 'afskaering',
+  'experiment' : 'afskaering',
 #  'experiment' : 'ekstra1',
 #  'experiment' : 'ekstra2',
 #  'experiment' : 'mishandling',
 #  'experiment' : 'normal',
-  'experiment' : 'ophaengning',
+#  'experiment' : 'ophaengning',
 }
 
 preprocess_depth = {
@@ -42,20 +41,43 @@ canonization = {
   'segmentation' : segmentation,
 }
 
-feature_extraction = {
+features = {
   'canonization' : canonization,
 
+#  'jet_bow': {
+#    'gauss_window_grid': (2,4),
+#    'gauss_window_sigma': 8,
+#    'num_train_images' : 20,
+#    'feature_step': 4,
+#    'num_clusters': 900,
+#    'feature': 'jet',
+#    'feature_opts': {
+#      'step': 4,
+#      'k_min': 1,
+#      'k_max': 3,
+#      'sigma': 6,
+#      'rings': 2,
+#      'ring_samplings': 5,
+#      'normalization': 'l2',
+##      'whitening': True
+#     },
+#  },
   'daisy_bow': {
     'gauss_window_grid': (2,4),
-    'gauss_window_sigma': 10,
+    'gauss_window_sigma': 8,
     'num_train_images' : 20,
-    'num_clusters': 500,
-    'daisy': {
+    'feature_step': 4,
+    'num_clusters': 900,
+    'feature_opts': {
       'step': 4,
-    },
+      'radius': 15,
+      'rings': 3,
+      'histograms': 8,
+      'orientations': 8,
+      'normalization': 'l2',
+     },
   },
-#  'daisy': {
-#  },
+
 #  'region_properties': {
 #    'grid': (2,6),
 #    'properties': [
@@ -73,5 +95,11 @@ matching = {
 #  'bipartite_matching': True,
   'bipartite_matching': False,
   'metric' : 'euclidean',
+}
+
+options = {
+  'dataset': dataset,
+  'features': features,
+  'matching': matching,
 }
 
